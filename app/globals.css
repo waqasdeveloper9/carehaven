@@ -580,3 +580,32 @@ td small { font-size: 10px; margin-top: 4px; }
 
 .child-cover .demo-portrait { height: auto; aspect-ratio: 1; flex-shrink: 0; }
 .child-avatar.demo-portrait { aspect-ratio: 1; }
+
+.auth-password-link { display: flex; justify-content: flex-end; margin: -8px 0 22px; }
+.auth-password-link button { background: transparent; color: var(--green); font-size: 11px; padding: 3px 0; }
+.auth-mode-links { display: flex; justify-content: center; }
+.auth-mode-links .text-button { display: inline-flex; align-items: center; gap: 7px; }
+.auth-feedback { display: flex; align-items: flex-start; gap: 11px; margin-top: 18px; padding: 16px; background: var(--mint); border: 1px solid #d7e9df; color: var(--green-deep); border-radius: 12px; font-size: 12px; }
+.auth-feedback > svg { flex-shrink: 0; margin-top: 2px; }
+.auth-feedback > p { line-height: 1.75; }
+.auth-card > .auth-form-title { margin-bottom: 12px; }
+.security-heading { display: flex; align-items: center; gap: 13px; margin-bottom: 21px; }
+.security-heading p { font-size: 12px; color: var(--muted); margin-top: 5px; }
+.account-security { grid-column: 1 / -1; }
+.account-security .password-form { max-width: 520px; }
+.password-session-note { display: flex; align-items: center; gap: 8px; color: #81958c; font-size: 11px; margin: 10px 0 23px; }
+.password-session-note > svg { flex-shrink: 0; }
+.password-form .error { margin-top: 18px; }
+.password-success { background: #f2f9f4; border: 1px solid #deeee2; border-radius: 14px; padding: 24px; color: var(--green); margin: 21px 0; }
+.password-success h3 { margin: 10px 0; }
+.password-success p { font-size: 12px; margin-bottom: 19px; }
+.password-form > .button { min-height: 44px; }
+.reset-link-help { margin-top: 20px; color: var(--muted); font-size: 12px; }
+.reset-link-help .button { margin-top: 23px; }
+.reset-link-help .text-button { display: block; }
+@media (max-width: 760px) {
+  .security-heading { align-items: flex-start; }
+  .security-heading p, .password-session-note { font-size: 10px; }
+  .auth-feedback { font-size: 11px; padding: 14px; }
+  .auth-password-link button { font-size: 11px; }
+}

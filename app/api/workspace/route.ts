@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { demoWorkspace } from '@/lib/demo';
 import { permissions, categories, config } from '@/lib/config';
 import { z } from 'zod';
+import { isSameOriginRequest } from '@/lib/request-security';
 const demo = () => process.env.APP_MODE === 'demo' || (process.env.NODE_ENV !== 'production' && !process.env.APP_MODE && !config.supabaseUrl);
 export async function GET() {
  if(demo()) return NextResponse.json(demoWorkspace());
@@ -28,7 +29,7 @@ const actionSchema = z.discriminatedUnion('action',[
  z.object({action:z.literal('expense'),donor_id:id,orphan_id:id,amount,category:z.enum(categories),description:z.string().trim().min(2).max(500),verification_status:z.enum(['verified','pending','forced']),audit_notes:z.string().max(2000).optional(),receipt_url:z.string().max(500).optional(),request_id:id}),
 ]);
 export async function POST(request: Request) {
- if(request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({error:'Invalid origin'},{status:403});
+ if(!isSameOriginRequest(request)) return NextResponse.json({error:'Invalid origin'},{status:403});
  if(demo()) return NextResponse.json({error:'Demo changes are stored in this browser only.'},{status:400});
  try {
  const body = actionSchema.parse(await request.json()); const client=await supabase();
