@@ -10,9 +10,10 @@ export const authActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('logout') }),
   z.object({ action: z.literal('forgot_password'), email: z.email() }),
   z.object({ action: z.literal('change_password'), current_password: z.string().min(1).max(128), ...confirmation }),
+  z.object({ action: z.literal('setup_password'), token_hash: z.string().min(1).max(1024).optional(), session_setup: z.literal(true).optional(), proof_type: z.enum(['email','recovery']).default('email'), ...confirmation }),
   z.object({ action: z.literal('reset_password'), token_hash: z.string().min(1).max(1024).optional(), code: z.string().min(1).max(2048).optional(), session_recovery: z.literal(true).optional(), ...confirmation }),
 ]).superRefine((value, context) => {
-  if ((value.action === 'change_password' || value.action === 'reset_password') && value.password !== value.confirm_password) {
+  if ((value.action === 'change_password' || value.action === 'reset_password' || value.action === 'setup_password') && value.password !== value.confirm_password) {
     context.addIssue({ code: 'custom', path: ['confirm_password'], message: 'The passwords do not match.' });
   }
   if (value.action === 'change_password' && value.password === value.current_password) {
@@ -21,10 +22,21 @@ export const authActionSchema = z.discriminatedUnion('action', [
   if (value.action === 'reset_password' && [value.token_hash,value.code,value.session_recovery].filter(Boolean).length !== 1) {
     context.addIssue({ code: 'custom', path: ['token_hash'], message: 'A valid password recovery link is required.' });
   }
+  if(value.action==='setup_password' && [value.token_hash,value.session_setup].filter(Boolean).length!==1){
+    context.addIssue({code:'custom',path:['token_hash'],message:'A valid welcome link is required.'});
+  }
 });
 
 export function hasRecentRecovery(claims: {amr?:unknown}, now = Math.floor(Date.now()/1000)) {
-  return Array.isArray(claims.amr) && claims.amr.some(item => item && typeof item === 'object' && item.method === 'recovery' && typeof item.timestamp === 'number' && Number.isFinite(item.timestamp) && item.timestamp >= now-recoveryPolicy.maximumAgeSeconds && item.timestamp <= now+recoveryPolicy.futureClockSkewSeconds);
+  return hasRecentMethod(claims,['recovery'],now);
+}
+
+export function hasRecentWelcomeProof(claims:{amr?:unknown},now=Math.floor(Date.now()/1000)){
+  // Recovery supports welcome links sent before invitations were separated from password resets.
+  return hasRecentMethod(claims,['otp','magiclink','recovery'],now);
+}
+function hasRecentMethod(claims:{amr?:unknown},methods:readonly string[],now:number){
+  return Array.isArray(claims.amr)&&claims.amr.some(item=>item&&typeof item==='object'&&methods.includes(item.method)&&typeof item.timestamp==='number'&&Number.isFinite(item.timestamp)&&item.timestamp>=now-recoveryPolicy.maximumAgeSeconds&&item.timestamp<=now+recoveryPolicy.futureClockSkewSeconds);
 }
 
 export function resolveLogin(identifier: string, alias?: string, adminEmail?: string) {

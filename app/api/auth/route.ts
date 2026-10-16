@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { authActionSchema, hasRecentRecovery, recoveryMessage, resolveLogin } from '@/lib/auth-policy';
 import { isSameOriginRequest, requestOrigin } from '@/lib/request-security';
+import { completeWelcomeSetup } from '@/lib/welcome-flow';
 
 export async function POST(request: Request) {
   const origin = requestOrigin(request);
@@ -9,6 +10,18 @@ export async function POST(request: Request) {
   try {
     const body = authActionSchema.parse(await request.json());
     const client = await supabase();
+
+    if(body.action==='setup_password'){
+      const result=await completeWelcomeSetup(body,{
+        verifyToken:async(hash,type)=>{const {error}=await client.auth.verifyOtp({token_hash:hash,type});if(error)throw new Error('This welcome link is invalid or expired. Request a new welcome email.');},
+        identity:async()=>{const [{data:{user},error:userError},{data,error}]=await Promise.all([client.auth.getUser(),client.auth.getClaims()]);return userError||error||!user?.email||!data?null:{id:user.id,email:user.email,claims:data.claims};},
+        profile:async id=>{const {data,error}=await client.from('profiles').select('*').eq('id',id).single();if(error)throw new Error('Account setup is unavailable. Contact your administrator.');return data;},
+        savePassword:async password=>{const {error}=await client.auth.updateUser({password});if(error)throw error;},
+        signOut:async scope=>{const {error}=await client.auth.signOut({scope});if(error)throw error;},
+        signIn:async(email,password)=>{const {error}=await client.auth.signInWithPassword({email,password});return !error;},
+      });
+      return NextResponse.json(result,{headers:{'Cache-Control':'no-store'}});
+    }
 
     if (body.action === 'forgot_password') {
       // The response does not reveal whether this email belongs to an account.

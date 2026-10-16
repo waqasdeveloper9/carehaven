@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Welcome to your care community</title></head>
+<body style="margin:0;padding:0;background-color:#f5f8f4;color:#454967;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Your invitation is here. Choose your password and start making a meaningful difference.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f8f4;">
+    <tr><td align="center" style="padding:36px 16px;">
+      <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="width:100%;max-width:580px;background-color:#ffffff;border:1px solid #e3ece5;border-radius:24px;overflow:hidden;">
+        <tr><td style="padding:28px 32px;border-bottom:1px solid #edf1ed;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="font-size:38px;line-height:42px;color:#df5b8b;padding-right:12px;">♡</td>
+            <td><div style="font-size:24px;line-height:30px;font-weight:700;color:#24264f;">{{ if .Data.application_name }}{{ .Data.application_name }}{{ else }}Your care community{{ end }}</div><div style="font-size:9px;line-height:18px;font-weight:700;letter-spacing:2px;color:#787f94;">CARE WITH ACCOUNTABILITY</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:38px 32px 34px;background-color:#e8f4ee;">
+          <p style="margin:0 0 14px;font-size:10px;line-height:18px;font-weight:700;letter-spacing:2px;color:#23856a;">A LITTLE CARE. A LASTING IMPACT.</p>
+          <h1 style="margin:0;font-size:34px;line-height:41px;letter-spacing:-1px;color:#24264f;">Good things begin<br>with people like you.</h1>
+          <p style="margin:20px 0 0;font-size:15px;line-height:25px;color:#4a6b60;">A warm welcome to a community built around care, kindness, and brighter tomorrows.</p>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 18px;font-size:18px;line-height:28px;font-weight:700;color:#24264f;">Hello{{ if .Data.full_name }} {{ .Data.full_name }}{{ end }},</p>
+          <p style="margin:0 0 16px;font-size:15px;line-height:26px;">We’re happy you’re here. Your account has been prepared, and we’re looking forward to welcoming you into {{ if .Data.application_name }}{{ .Data.application_name }}{{ else }}our care community{{ end }}.</p>
+          <p style="margin:0 0 26px;font-size:15px;line-height:26px;">Every contribution of time, support, and kindness helps create a more hopeful future. Thank you for being part of that journey.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8faf7;border:1px solid #e3ece5;border-radius:14px;">
+            <tr><td style="padding:20px;"><p style="margin:0 0 8px;font-size:11px;line-height:18px;font-weight:700;letter-spacing:1px;color:#23856a;">YOUR ACCOUNT IS READY</p><p style="margin:0;font-size:14px;line-height:24px;">Your login email: <strong style="color:#24264f;word-break:break-all;">{{ .Email }}</strong></p><p style="margin:9px 0 0;font-size:13px;line-height:22px;color:#787f94;">Choose your own private password. We’ll sign you in and open your workspace as soon as you finish.</p></td></tr>
+          </table>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 20px;"><tr><td bgcolor="#23856a" style="border-radius:10px;text-align:center;"><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email" style="display:inline-block;padding:17px 26px;font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">Set up my account &nbsp; →</a></td></tr></table>
+          <p style="margin:0;font-size:12px;line-height:21px;color:#787f94;">This personal invitation can be used once. If the link has expired, ask your administrator for a new welcome email. Keep this link private.</p>
+          <p style="margin:28px 0 0;font-size:15px;line-height:25px;">With care,<br><strong style="color:#23856a;">{{ if .Data.application_name }}{{ .Data.application_name }}{{ else }}Your care community{{ end }} team</strong></p>
+        </td></tr>
+        <tr><td style="padding:22px 32px;background-color:#fbeaf0;border-top:1px solid #f4dde5;"><p style="margin:0;font-size:13px;line-height:22px;color:#815c71;">Every child deserves a brighter tomorrow.<br><span style="font-size:11px;color:#8b7a86;">Thank you for helping make that possible.</span></p></td></tr>
+      </table>
+      <p style="margin:20px 0 0;max-width:500px;font-size:11px;line-height:20px;color:#87908b;">You received this invitation because an administrator created an account for this email address. If you weren’t expecting it, you can safely ignore it.</p>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       if (!userId) {
         const created = await admin.auth.admin.createUser({
           email: body.email, password: randomBytes(48).toString('base64url'), email_confirm: true,
-          user_metadata: { full_name: body.full_name },
+          user_metadata: { full_name: body.full_name, application_name:config.name },
           app_metadata: { provisioning_request: body.request_id, provisioned_by: user.id },
         });
         if (created.error) {
@@ -49,12 +49,18 @@ export async function POST(request: Request) {
     const { data: lease, error: leaseError } = await admin.rpc('claim_account_invitation', { p_actor: user.id, p_user: userId });
     if (leaseError) throw leaseError;
     if (!lease) return NextResponse.json({ ok: true, message: 'Account saved. An invitation was recently attempted or password setup is already complete. Check its onboarding status.' });
-    const { data: target, error: targetError } = await admin.from('profiles').select('email').eq('id', userId).single();
+    const { data: target, error: targetError } = await admin.from('profiles').select('email,full_name').eq('id', userId).single();
     // Use a separate client: generating email must never replace the administrator's session.
     const mailClient = createClient(config.supabaseUrl, config.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
     let accepted = false;
     if (!targetError && target) {
-      try { const { error } = await mailClient.auth.resetPasswordForEmail(target.email, { redirectTo }); accepted = !error; }
+      try {
+        const metadata=await admin.auth.admin.updateUserById(userId,{user_metadata:{full_name:target.full_name,application_name:config.name}});
+        if(metadata.error)throw metadata.error;
+        // The dedicated Magic Link template carries the branded welcome email. Recovery remains separate.
+        const {error}=await mailClient.auth.signInWithOtp({email:target.email,options:{shouldCreateUser:false,emailRedirectTo:redirectTo}});
+        accepted=!error;
+      }
       catch { accepted = false; }
     }
     const finished = await admin.rpc('finish_account_invitation', { p_actor: user.id, p_user: userId, p_lease: lease, p_success: accepted });
