@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { demoWorkspace } from '@/lib/demo';
-import { permissions, categories, config } from '@/lib/config';
+import { permissions, config } from '@/lib/config';
 import { z } from 'zod';
 import { isSameOriginRequest } from '@/lib/request-security';
 import { accountProvisioningConfigured } from '@/lib/supabase-admin';
 import { serverConfig } from '@/lib/server-config';
+import { expenseSchema, moneySchema } from '@/lib/finance-policy';
+import { workspaceError } from '@/lib/api-errors';
 const demo = () => process.env.APP_MODE === 'demo' || (process.env.NODE_ENV !== 'production' && !process.env.APP_MODE && !config.supabaseUrl);
 export async function GET() {
  if(demo()) return NextResponse.json(demoWorkspace());
@@ -48,9 +50,9 @@ export async function GET() {
    staffDefaultPermissions=Array.isArray(settings.data?.value)?settings.data.value.filter((value:unknown)=>permissions.includes(value as typeof permissions[number])):[];
  }
  return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
- }catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Could not load workspace.'},{status:503});}
+ }catch(error){const failure=workspaceError(error);return NextResponse.json({error:failure.message},{status:failure.status});}
 }
-const id = z.uuid(); const amount = z.number().positive().max(9999999999.99).refine(n=>Math.round(n*100)/100===n,'Use no more than two decimal places.');
+const id = z.uuid(); const amount = moneySchema;
 const actionSchema = z.discriminatedUnion('action',[
  z.object({action:z.literal('child'),id:id.optional(),full_name:z.string().trim().min(2).max(100),date_of_birth:z.iso.date(),gender:z.enum(['Male','Female','Other']),picture_url:z.string().max(500).nullable().optional()}),
  z.object({action:z.literal('status'),id,status:z.enum(['active','inactive','graduated','left'])}),
@@ -58,7 +60,7 @@ const actionSchema = z.discriminatedUnion('action',[
  z.object({action:z.literal('permission'),id,permission:z.enum(permissions),enabled:z.boolean()}),
  z.object({action:z.literal('assignment'),donor_id:id,orphan_id:id,monthly_spending_limit:amount,amount}),
  z.object({action:z.literal('donation'),donor_id:id,amount,description:z.string().trim().min(2).max(500),request_id:id}),
- z.object({action:z.literal('expense'),donor_id:id,orphan_id:id,amount,category:z.enum(categories),description:z.string().trim().min(2).max(500),verification_status:z.enum(['verified','pending','forced']),audit_notes:z.string().max(2000).optional(),receipt_url:z.string().max(500).optional(),request_id:id}),
+ expenseSchema,
 ]);
 export async function POST(request: Request) {
  if(!isSameOriginRequest(request)) return NextResponse.json({error:'Invalid origin'},{status:403});
@@ -80,5 +82,5 @@ export async function POST(request: Request) {
  case 'expense': result=await client.rpc('post_expense',{p_donor:body.donor_id,p_child:body.orphan_id,p_amount:body.amount,p_category:body.category,p_description:body.description,p_verification:body.verification_status,p_notes:body.audit_notes||null,p_receipt:body.receipt_url||null,p_request:body.request_id});break;
  }
  if(result.error) throw result.error; return NextResponse.json({ok:true});
- }catch(error){return NextResponse.json({error:error instanceof Error ? error.message : 'Operation failed.'},{status:400});}
+ }catch(error){const failure=workspaceError(error);return NextResponse.json({error:failure.message},{status:failure.status});}
 }

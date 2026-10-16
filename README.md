@@ -76,3 +76,4 @@ The shared mint, emerald, blush, and navy theme covers authentication and every 
 
 See [first administrator and recovery setup](supabase/ADMIN_SETUP.md) for the service-only bootstrap migration, private `npm run setup:admin` command, optional administrator username alias, and Supabase recovery email template. The login screen includes Forgot password, and Settings includes Account security → Change password. No default password is stored in the application.
 Account creation, staff permissions, sponsor donations, photos and onboarding setup: [deployment guide](supabase/ACCOUNT_ONBOARDING.md).
+Financial forms retain their draft when moving through missing-receipt review or retrying a failed save. Pending expenses and justified receipt exceptions still require an active funded sponsorship and obey its monthly cap. Database rejections are displayed with actionable messages; drafts are cleared when the dialog is explicitly closed or a save succeeds.

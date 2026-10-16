@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import type { Profile } from './types';
+import { moneySchema } from './finance-policy';
 
 export const staffDefaults = ['manage_orphans', 'assign_donors'] as const;
-export const donationAmount = z.number().positive().max(9999999999.99).refine(value => Math.round(value * 100) / 100 === value, 'Use at most two decimal places.');
+export const donationAmount = moneySchema;
 export const createAccountSchema = z.object({
   action: z.literal('create'), request_id: z.uuid(), role: z.enum(['staff_user', 'donor']),
   full_name: z.string().trim().min(2).max(100), email: z.email().transform(value => value.toLowerCase()),
