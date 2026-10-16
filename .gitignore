@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env*
+!.env.example
+*.tsbuildinfo
+playwright-report/
+.tmp-tests/
+Passwords.txt
+*.pem
+*.key

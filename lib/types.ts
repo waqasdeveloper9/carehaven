@@ -1,0 +1,7 @@
+import type { Permission } from './config';
+export type Profile = { id: string; full_name: string; email: string; role: 'admin' | 'staff_user' | 'donor'; status: 'pending' | 'approved' | 'rejected' };
+export type Child = { id: string; full_name: string; date_of_birth: string; gender: string; status: 'active' | 'inactive' | 'graduated' | 'left'; admission_date: string; picture_url?: string };
+export type Assignment = { id: string; donor_id: string; orphan_id: string; monthly_spending_limit: number; allocated_balance: number; status: 'active' | 'completed'; start_date: string; end_date?: string };
+export type Entry = { id: string; donor_id: string; orphan_id?: string; type: 'DONATION_RECEIVED' | 'EXPENSE_SPENT'; category: string; amount_in: number; amount_out: number; verification_status: 'verified' | 'pending' | 'forced'; description: string; created_at: string; receipt_url?: string; audit_notes?: string };
+export type Audit = { id: string; action_type: string; created_at: string; details: Record<string, unknown> };
+export type Workspace = { mode: 'demo' | 'live'; profile: Profile; profiles: Profile[]; children: Child[]; assignments: Assignment[]; entries: Entry[]; audits: Audit[]; grants: Record<string, Record<Permission, boolean>> };
