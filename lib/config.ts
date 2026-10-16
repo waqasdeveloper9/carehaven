@@ -1,5 +1,5 @@
 export const config = {
-  name: process.env.NEXT_PUBLIC_APP_NAME || 'CareLedger',
+  name: process.env.NEXT_PUBLIC_APP_NAME || 'CareHaven',
   organization: process.env.NEXT_PUBLIC_ORGANIZATION_NAME || 'Your organization',
   currency: process.env.NEXT_PUBLIC_CURRENCY || 'PKR',
   locale: process.env.NEXT_PUBLIC_LOCALE || 'en-PK',

@@ -1,4 +1,4 @@
-# CareLedger
+# CareHaven
 
 A Next.js App Router application for child care records, donor sponsorships, financial recording, and audit review. English is used throughout. Organization settings and service credentials are supplied through configuration; fictional demonstration records are isolated in `lib/demo.ts`.
 
@@ -67,3 +67,7 @@ This is an initial development implementation, not a production certification. D
 - Initial administrator email, staff roles, donor approval process, and receipt override policy.
 - Escrow release/reassignment rules, monthly schedule requirements, and migration data.
 - Hosting domain/provider, email provider, backup and data retention requirements.
+
+## Approved visual theme
+
+The shared mint, emerald, blush, and navy theme covers authentication and every workspace page. See [design notes and approved references](design/README.md). Theme artwork paths are configurable; illustrative child portraits are used only in demo mode. The direct sign-in page is `/login`.
