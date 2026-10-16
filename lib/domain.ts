@@ -1,7 +1,7 @@
 import type { Workspace, Profile } from './types';
 import { config, type Permission } from './config';
 function monthKey(date:Date) { const parts=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',timeZone:config.timezone}).formatToParts(date);return `${parts.find(p=>p.type==='year')?.value}-${parts.find(p=>p.type==='month')?.value}`; }
-export function can(data: Workspace, permission: Permission, profile: Profile = data.profile) { return profile.status === 'approved' && (profile.role === 'admin' || (profile.role === 'staff_user' && !!data.grants[profile.id]?.[permission])); }
+export function can(data: Workspace, permission: Permission, profile: Profile = data.profile) { return profile.status === 'approved' && !profile.requires_password_setup && (profile.role === 'admin' || (profile.role === 'staff_user' && !!data.grants[profile.id]?.[permission])); }
 export function scopeDemo(data: Workspace): Workspace {
  if(data.mode!=='demo'||data.profile.role==='admin')return data;
  if(data.profile.role==='donor') { const assignments=data.assignments.filter(a=>a.donor_id===data.profile.id);return {...data,profiles:[data.profile],children:data.children.filter(c=>assignments.some(a=>a.orphan_id===c.id)),assignments,entries:data.entries.filter(e=>e.donor_id===data.profile.id),audits:[],grants:{}}; }

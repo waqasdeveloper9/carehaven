@@ -10,7 +10,7 @@ export const authActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('logout') }),
   z.object({ action: z.literal('forgot_password'), email: z.email() }),
   z.object({ action: z.literal('change_password'), current_password: z.string().min(1).max(128), ...confirmation }),
-  z.object({ action: z.literal('reset_password'), token_hash: z.string().min(1).max(1024).optional(), code: z.string().min(1).max(2048).optional(), ...confirmation }),
+  z.object({ action: z.literal('reset_password'), token_hash: z.string().min(1).max(1024).optional(), code: z.string().min(1).max(2048).optional(), session_recovery: z.literal(true).optional(), ...confirmation }),
 ]).superRefine((value, context) => {
   if ((value.action === 'change_password' || value.action === 'reset_password') && value.password !== value.confirm_password) {
     context.addIssue({ code: 'custom', path: ['confirm_password'], message: 'The passwords do not match.' });
@@ -18,7 +18,7 @@ export const authActionSchema = z.discriminatedUnion('action', [
   if (value.action === 'change_password' && value.password === value.current_password) {
     context.addIssue({ code: 'custom', path: ['password'], message: 'Choose a different password from your current password.' });
   }
-  if (value.action === 'reset_password' && Boolean(value.token_hash) === Boolean(value.code)) {
+  if (value.action === 'reset_password' && [value.token_hash,value.code,value.session_recovery].filter(Boolean).length !== 1) {
     context.addIssue({ code: 'custom', path: ['token_hash'], message: 'A valid password recovery link is required.' });
   }
 });

@@ -4,7 +4,7 @@ import { Check, KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { passwordPolicy } from '@/lib/auth-policy';
 
-export function PasswordForm({mode,tokenHash,recoveryCode,demo=false}:{mode:'change'|'reset';tokenHash?:string;recoveryCode?:string;demo?:boolean}){
+export function PasswordForm({mode,tokenHash,recoveryCode,sessionRecovery=false,demo=false}:{mode:'change'|'reset';tokenHash?:string;recoveryCode?:string;sessionRecovery?:boolean;demo?:boolean}){
   const [error,setError]=useState('');const [success,setSuccess]=useState('');const [busy,setBusy]=useState(false);
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setError('');const form=event.currentTarget;const values=new FormData(form);
@@ -12,7 +12,7 @@ export function PasswordForm({mode,tokenHash,recoveryCode,demo=false}:{mode:'cha
     if(password!==confirm){setError('The passwords do not match.');return;}
     setBusy(true);
     try{
-      const body={action:mode==='change'?'change_password':'reset_password',password,confirm_password:confirm,...(mode==='change'?{current_password:values.get('current_password')}:tokenHash?{token_hash:tokenHash}:{code:recoveryCode})};
+      const body={action:mode==='change'?'change_password':'reset_password',password,confirm_password:confirm,...(mode==='change'?{current_password:values.get('current_password')}:tokenHash?{token_hash:tokenHash}:sessionRecovery?{session_recovery:true}:{code:recoveryCode})};
       const response=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await response.json();
       if(!response.ok)throw new Error(result.error);form.reset();setSuccess(result.message);
     }catch(error){setError(error instanceof Error?error.message:'Your password could not be updated.');}finally{setBusy(false);}

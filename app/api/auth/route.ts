@@ -24,6 +24,15 @@ export async function POST(request: Request) {
       if (!email) return NextResponse.json({ error: 'Invalid email, username, or password.' }, { status: 400 });
       const { error } = await client.auth.signInWithPassword({ email, password: body.password });
       if (error) throw new Error('Invalid email, username, or password.');
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const { data: profile, error: profileError } = await client.from('profiles').select('*').eq('id',user.id).single();
+        if (profileError) throw new Error('Account configuration is unavailable. Contact your administrator.');
+        if (profile.requires_password_setup) {
+          await client.auth.signOut();
+          return NextResponse.json({ error: 'Set your password using your welcome email before signing in. Use Forgot password if you need a new link.' }, { status: 403 });
+        }
+      }
     }
 
     if (body.action === 'register') {
@@ -53,7 +62,7 @@ export async function POST(request: Request) {
       // Accept both cross-browser TokenHash links and Supabase's default PKCE email flow.
       const verification = body.token_hash
         ? await client.auth.verifyOtp({ token_hash: body.token_hash, type: 'recovery' })
-        : await client.auth.exchangeCodeForSession(body.code!);
+        : body.code ? await client.auth.exchangeCodeForSession(body.code) : {error:null};
       if (verification.error) return NextResponse.json({ error: body.code ? 'This reset link is invalid or expired. Open it in the browser where you requested it, or request a new link.' : 'This reset link is invalid or expired. Request a new link.' }, { status: 400 });
       const {data:claimData,error:claimError}=await client.auth.getClaims();
       if(claimError||!claimData||!hasRecentRecovery(claimData.claims)){

@@ -23,10 +23,10 @@ export function CareHero({ donor, onExplore }: { donor: boolean; onExplore: () =
 }
 
 export function ChildPortrait({child, demo, className = ''}: {child: Child; demo: boolean; className?: string}) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState('');
   const position = demo ? demoPortraitPositions[child.id] : undefined;
-  if(position) return <span className={`child-portrait demo-portrait ${className}`} role="img" aria-label={`Illustrative demo portrait for ${child.full_name}`} style={{backgroundImage:`url("${brand.demoPortraits}")`, backgroundPosition:position}}/>;
-  if(child.picture_url && !failed) return <img className={`child-portrait ${className}`} src={`/api/files?kind=photo&path=${encodeURIComponent(child.picture_url)}`} alt={`${child.full_name}'s profile`} onError={()=>setFailed(true)} loading="lazy"/>;
+  if(position && !child.picture_url) return <span className={`child-portrait demo-portrait ${className}`} role="img" aria-label={`Illustrative demo portrait for ${child.full_name}`} style={{backgroundImage:`url("${brand.demoPortraits}")`, backgroundPosition:position}}/>;
+  if(child.picture_url && failed!==child.picture_url) return <img className={`child-portrait ${className}`} src={demo && /^data:image\/(jpeg|png|webp);base64,/.test(child.picture_url)?child.picture_url:`/api/files?kind=photo&path=${encodeURIComponent(child.picture_url)}`} alt={`${child.full_name}'s profile`} onError={()=>setFailed(child.picture_url!)} loading="lazy"/>;
   return <span className={`child-portrait portrait-initials ${className}`} aria-label={`Profile initials for ${child.full_name}`}>{child.full_name.split(' ').map(n=>n[0]).slice(0,2).join('')}<Leaf aria-hidden="true"/></span>;
 }
 

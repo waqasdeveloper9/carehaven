@@ -11,27 +11,28 @@
     "setup:admin": "node scripts/setup-admin.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "jspdf": "^3.0.2",
+    "lucide-react": "^0.468.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.57.0",
-    "lucide-react": "^0.468.0",
-    "clsx": "^2.1.1",
     "tailwind-merge": "^3.3.0",
-    "@radix-ui/react-slot": "^1.2.3",
-    "class-variance-authority": "^0.7.1",
-    "exceljs": "^4.4.0",
-    "jspdf": "^3.0.2",
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
+    "@electric-sql/pglite": "^0.5.10",
+    "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^4.1.0",
-    "@tailwindcss/postcss": "^4.1.0",
-    "tsx": "^4.20.0"
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }

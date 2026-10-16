@@ -24,7 +24,7 @@ AUTH_ADMIN_EMAIL=your-real-admin-email
 APP_URL=https://your-permanent-production-domain
 ```
 
-The **server secret key** comes from Supabase Project Settings → API Keys → Secret keys. A legacy service-role key also works through `SUPABASE_SERVICE_ROLE_KEY`. This key is only needed for the local setup script. Never put it in a `NEXT_PUBLIC_*` variable, GitHub, a screenshot, or a chat message. The normal deployed app does not need this key.
+The **server secret key** comes from Supabase Project Settings → API Keys → Secret keys. A legacy service-role key also works through `SUPABASE_SERVICE_ROLE_KEY`. Never put it in a `NEXT_PUBLIC_*` variable, GitHub, a screenshot, or a chat message. Ordinary sign-in does not need it; live administrator-created account invitations use it on the server. See `ACCOUNT_ONBOARDING.md` for deployment setup.
 
 Run:
 
