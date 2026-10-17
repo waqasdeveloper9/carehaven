@@ -49,7 +49,7 @@ export async function GET() {
    if(settings.error)throw settings.error;
    staffDefaultPermissions=Array.isArray(settings.data?.value)?settings.data.value.filter((value:unknown)=>permissions.includes(value as typeof permissions[number])):[];
  }
- return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{profilePhotos:'avatar_path' in profile,sponsorPermissions:'avatar_path' in profile,inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
  }catch(error){const failure=workspaceError(error);return NextResponse.json({error:failure.message},{status:failure.status});}
 }
 const id = z.uuid(); const amount = moneySchema;

@@ -8,6 +8,7 @@ export const config = {
   supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
   receiptBucket: process.env.NEXT_PUBLIC_RECEIPT_BUCKET || 'receipts',
   photoBucket: process.env.NEXT_PUBLIC_PHOTO_BUCKET || 'child-photos',
+  avatarBucket: process.env.NEXT_PUBLIC_AVATAR_BUCKET || 'profile-photos',
   maxUploadMB: Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_MB || 10),
 };
 export const permissions = ['manage_orphans', 'assign_donors', 'view_financials', 'manage_financials', 'approve_donors', 'run_audits'] as const;

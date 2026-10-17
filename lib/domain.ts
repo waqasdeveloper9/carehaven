@@ -1,12 +1,14 @@
 import type { Workspace, Profile } from './types';
 import { config, type Permission } from './config';
 function monthKey(date:Date) { const parts=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',timeZone:config.timezone}).formatToParts(date);return `${parts.find(p=>p.type==='year')?.value}-${parts.find(p=>p.type==='month')?.value}`; }
-export function can(data: Workspace, permission: Permission, profile: Profile = data.profile) { return profile.status === 'approved' && !profile.requires_password_setup && (profile.role === 'admin' || (profile.role === 'staff_user' && !!data.grants[profile.id]?.[permission])); }
+export function can(data: Workspace, permission: Permission, profile: Profile = data.profile) { return profile.status === 'approved' && !profile.requires_password_setup && (profile.role === 'admin' || (['staff_user','donor'].includes(profile.role) && !!data.grants[profile.id]?.[permission])); }
 export function scopeDemo(data: Workspace): Workspace {
  if(data.mode!=='demo'||data.profile.role==='admin')return data;
- if(data.profile.role==='donor') { const assignments=data.assignments.filter(a=>a.donor_id===data.profile.id);return {...data,profiles:[data.profile],children:data.children.filter(c=>assignments.some(a=>a.orphan_id===c.id)),assignments,entries:data.entries.filter(e=>e.donor_id===data.profile.id),audits:[],grants:{}}; }
  const financial=can(data,'view_financials')||can(data,'manage_financials')||can(data,'run_audits');
- return {...data,entries:financial?data.entries:[],audits:can(data,'run_audits')?data.audits:[],assignments:financial||can(data,'assign_donors')?data.assignments:[],profiles:data.profiles.filter(p=>p.id===data.profile.id||p.role==='donor'),grants:{[data.profile.id]:data.grants[data.profile.id]}};
+ const assignments=financial||can(data,'assign_donors')?data.assignments:data.assignments.filter(a=>a.donor_id===data.profile.id);
+ const children=['manage_orphans','assign_donors','manage_financials','view_financials','run_audits'].some(p=>can(data,p as Permission))?data.children:data.children.filter(c=>assignments.some(a=>a.orphan_id===c.id));
+ const readSponsors=['assign_donors','approve_donors','manage_financials','view_financials','run_audits'].some(p=>can(data,p as Permission));
+ return {...data,children,entries:financial?data.entries:data.profile.role==='donor'?data.entries.filter(e=>e.donor_id===data.profile.id):[],audits:can(data,'run_audits')?data.audits:[],assignments,profiles:data.profiles.filter(p=>p.id===data.profile.id||(p.role==='donor'&&readSponsors)),grants:{[data.profile.id]:data.grants[data.profile.id]}};
 }
 export function cents(value: number) { if (!Number.isFinite(value) || value <= 0 || Math.round(value * 100) / 100 !== value) throw new Error('Enter a positive amount with no more than two decimal places.'); return Math.round(value * 100); }
 export function validateExpense(data: Workspace, donorId: string, childId: string, amount: number, now = new Date()) {

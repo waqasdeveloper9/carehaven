@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Mail, Plus, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { config, permissions, type Permission } from '@/lib/config';
+import { config } from '@/lib/config';
 import { can } from '@/lib/domain';
 import { needsOnboardingFollowUp, onboardingStatus, staffDefaults } from '@/lib/onboarding';
 import type { Profile, Workspace } from '@/lib/types';
@@ -17,10 +17,6 @@ export function AccountFollowUp({data,busy,onResend}:{data:Workspace;busy:boolea
 
 export function UsersPanel({data,busy,onCreate,onResend}:{data:Workspace;busy:boolean;onCreate:()=>void;onResend:(id:string)=>void}){
  return <><div className="section-actions"><p className="muted">Administrators have full access. New staff receive only the configured initial permissions.</p><Button onClick={onCreate}><Plus size={16}/>Add user</Button></div><section className="panel"><div className="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Account setup</th><th>Last sign-in</th><th>Actions</th></tr></thead><tbody>{data.profiles.filter(profile=>profile.role!=='donor').map(profile=><tr key={profile.id}><td><strong>{profile.full_name}</strong><small>{profile.email}</small></td><td>{profile.role==='admin'?'Administrator · Full access':'Staff member'}</td><td><OnboardingBadge profile={profile}/></td><td>{profile.last_login_at?new Date(profile.last_login_at).toLocaleString(config.locale):'No recorded sign-in'}</td><td>{profile.requires_password_setup&&<Button variant="outline" disabled={busy||data.capabilities?.inviteAccounts===false} onClick={()=>onResend(profile.id)}>Resend setup email</Button>}</td></tr>)}</tbody></table></div></section><AccountFollowUp data={data} busy={busy} onResend={onResend}/></>;
-}
-
-export function PermissionsPanel({data,busy,onChange}:{data:Workspace;busy:boolean;onChange:(id:string,permission:Permission,enabled:boolean)=>void}){
- return <section className="panel"><div className="panel-heading"><div><h2>Team access</h2><p>Administrators inherit every permission. Staff grants are enforced on each database request.</p></div></div><div className="table-wrap"><table><thead><tr><th>Team member</th>{permissions.map(permission=><th key={permission}>{permission.replaceAll('_',' ')}</th>)}</tr></thead><tbody>{data.profiles.filter(profile=>profile.role!=='donor').map(profile=><tr key={profile.id}><td><strong>{profile.full_name}</strong><small>{profile.role==='admin'?'Administrator · Inherited full access':profile.email}</small>{profile.requires_password_setup&&<small>Password setup required before access</small>}</td>{permissions.map(permission=><td key={permission}>{profile.role==='admin'?<span className="badge green" aria-label={`${permission}: administrator full access`}>Full access</span>:<button role="switch" aria-label={`${profile.full_name}: ${permission.replaceAll('_',' ')}`} aria-checked={!!data.grants[profile.id]?.[permission]} className={`switch ${data.grants[profile.id]?.[permission]?'on':''}`} disabled={busy} onClick={()=>onChange(profile.id,permission,!data.grants[profile.id]?.[permission])}><span/></button>}</td>)}</tr>)}</tbody></table></div><p className="panel-footnote">Sponsors can view only their own sponsorships and financial records. Pending setup accounts cannot enter the workspace, even when grants are assigned.</p></section>;
 }
 
 export function AccountEditor({role,data,onClose,onSaved}:{role:'staff_user'|'donor';data:Workspace;onClose:()=>void;onSaved:(message:string)=>Promise<void>}){
