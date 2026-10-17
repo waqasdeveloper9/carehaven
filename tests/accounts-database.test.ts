@@ -19,7 +19,7 @@ test('account provisioning, setup gate, financial isolation, retries, and child 
    grant usage on schema public,auth to authenticated,service_role;
    grant execute on function auth.uid(),auth.role() to authenticated,service_role;
   `);
-  for (const file of ['202610160001_core.sql','202610160002_admin_bootstrap.sql','202610160003_accounts_and_child_photos.sql','202610170004_profile_menu_and_access.sql']) await db.exec(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
+  for (const file of ['202610160001_core.sql','202610160002_admin_bootstrap.sql','202610160003_accounts_and_child_photos.sql','202610170004_profile_menu_and_access.sql','202610170005_batch_permissions.sql']) await db.exec(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
   await db.exec('grant all on all tables in schema public to service_role');
   await db.exec(`insert into public.app_settings(key,value) values('photo_bucket','"child-photos"')`);
   const admin = randomUUID(), staff = randomUUID(), sponsor = randomUUID(), other = randomUUID();
@@ -140,5 +140,21 @@ test('account provisioning, setup gate, financial isolation, retries, and child 
   await rpc('set_profile_avatar',[null]);
   await as('authenticated',admin);
   await assert.rejects(rpc('set_permission',[admin,'view_financials',false]),/Staff or sponsor/);
+  const edits=[{user_id:staff,permission:'manage_orphans',expected:false,enabled:true},{user_id:staff,permission:'view_financials',expected:false,enabled:true},{user_id:sponsor,permission:'assign_donors',expected:false,enabled:true}];
+  const beforeAudit=Number((await db.query<Record<string,unknown>>(`select count(*) as count from public.audit_logs where action_type='user_permissions_UPDATE'`)).rows[0].count);
+  const batch=(await rpc('set_permissions_batch',[edits])).rows[0].result as Record<string,Record<string,unknown>>;
+  assert.equal(batch[staff].manage_orphans,true);assert.equal(batch[staff].view_financials,true);assert.equal(batch[sponsor].assign_donors,true);
+  assert.equal(Object.keys(batch).length,2,'response contains affected accounts only');
+  const afterAudit=Number((await db.query<Record<string,unknown>>(`select count(*) as count from public.audit_logs where action_type='user_permissions_UPDATE'`)).rows[0].count);
+  assert.equal(afterAudit-beforeAudit,2,'one audited update per account, not per switch');
+  await assert.rejects(rpc('set_permissions_batch',[[{user_id:staff,permission:'manage_orphans',expected:true,enabled:false},{user_id:sponsor,permission:'assign_donors',expected:false,enabled:true}]]),/changed since you opened/);
+  assert.equal((await rpc('has_permission',[staff,'manage_orphans'])).rows[0].result,true,'a conflict rolls back every change');
+  await assert.rejects(rpc('set_permissions_batch',[[{user_id:staff,permission:'role',expected:false,enabled:true}]]),/Invalid permission changes/);
+  await assert.rejects(rpc('set_permissions_batch',[[{user_id:admin,permission:'run_audits',expected:true,enabled:false}]]),/Staff or sponsor/);
+  await assert.rejects(rpc('set_permissions_batch',[[edits[0],edits[0]]]),/Duplicate permission changes/);
+  const one=(await rpc('set_permissions_batch',[[{user_id:staff,permission:'manage_orphans',expected:true,enabled:false}]])).rows[0].result as Record<string,Record<string,unknown>>;
+  assert.equal(one[staff].manage_orphans,false);assert.equal(one[staff].view_financials,true,'unchanged grants are preserved');
+  await as('authenticated',sponsor);
+  await assert.rejects(rpc('set_permissions_batch',[[{user_id:sponsor,permission:'view_financials',expected:false,enabled:true}]]),/Administrator access required/);
  } finally { await db.close(); }
 });

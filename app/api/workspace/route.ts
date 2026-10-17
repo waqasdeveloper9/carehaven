@@ -9,12 +9,18 @@ import { serverConfig } from '@/lib/server-config';
 import { expenseSchema, moneySchema } from '@/lib/finance-policy';
 import { workspaceError } from '@/lib/api-errors';
 const demo = () => process.env.APP_MODE === 'demo' || (process.env.NODE_ENV !== 'production' && !process.env.APP_MODE && !config.supabaseUrl);
-export async function GET() {
+export async function GET(request:Request) {
  if(demo()) return NextResponse.json(demoWorkspace());
  try {
- const client = await supabase(); const {data:{user}} = await client.auth.getUser();
- if(!user) return NextResponse.json({error:'Please sign in.'},{status:401});
- const {data:profile,error} = await client.from('profiles').select('*').eq('id',user.id).single(); if(error) throw error;
+ const client = await supabase(); const {data:claims,error:claimsError} = await client.auth.getClaims();
+ const userId=!claimsError?claims?.claims.sub:undefined;
+ if(!userId) return NextResponse.json({error:'Please sign in.'},{status:401});
+ if(new URL(request.url).searchParams.get('section')==='audit'){
+  const result=await client.from('audit_logs').select('id,action_type,created_at,details').order('created_at',{ascending:false}).limit(serverConfig.auditHistoryLimit);
+  if(result.error)throw result.error;
+  return NextResponse.json({audits:result.data},{headers:{'Cache-Control':'no-store'}});
+ }
+ const {data:profile,error} = await client.from('profiles').select('*').eq('id',userId).single(); if(error) throw error;
  if(profile.requires_password_setup) return NextResponse.json({setupRequired:true,error:'Finish setting your password using the link in your welcome email. Use Forgot password to request another link.'},{status:403});
  if(profile.status !== 'approved') return NextResponse.json({pending:true,profile},{status:403});
  const allRows = async (table:string,columns='*') => {
@@ -32,23 +38,21 @@ export async function GET() {
      cursor=String(result.data.at(-1)![key]);
    }
  };
- const results = await Promise.all(['profiles','orphans','donor_child_assignments','financial_ledger','user_permissions'].map(table=>allRows(table)));
- for(const r of results) if(r.error) throw r.error;
- const [profiles,children,assignments,entries,grants] = results.map(r=>r.data || []);
+ const [results,auditResult,invitationResult,settings]=await Promise.all([
+  Promise.all(['profiles','orphans','donor_child_assignments','financial_ledger','user_permissions'].map(table=>allRows(table))),
+  client.from('audit_logs').select('id,action_type,created_at,details').order('created_at',{ascending:false}).limit(serverConfig.auditHistoryLimit),
+  profile.role==='admin'?allRows('account_invitations','user_id,delivery_status,send_attempts,last_sent_at,last_error'):Promise.resolve({data:[],error:null}),
+  profile.role==='admin'?client.from('app_settings').select('value').eq('key','staff_default_permissions').maybeSingle():Promise.resolve({data:null,error:null}),
+ ]);
+ for(const result of results)if(result.error)throw result.error;
+ if(auditResult.error)throw auditResult.error;
+ if(invitationResult.error&&!['42P01','PGRST205'].includes(invitationResult.error.code))throw invitationResult.error;
+ if(settings.error)throw settings.error;
+ const [profiles,children,assignments,entries,grants]=results.map(result=>result.data||[]);
  entries.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  assignments.sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)));
- const {data:audits,error:auditError}=await client.from('audit_logs').select('id,action_type,created_at,details').order('created_at',{ascending:false}).limit(serverConfig.auditHistoryLimit);
- if(auditError)throw auditError;
- let invitations:unknown[]=[];let staffDefaultPermissions:string[]=[];
- if(profile.role==='admin'){
-   const result=await allRows('account_invitations','user_id,delivery_status,send_attempts,last_sent_at,last_error');
-   // Older installations remain usable while the additive migration is being applied.
-   if(result.error && !['42P01','PGRST205'].includes(result.error.code))throw result.error;
-   invitations=result.data||[];
-   const settings=await client.from('app_settings').select('value').eq('key','staff_default_permissions').maybeSingle();
-   if(settings.error)throw settings.error;
-   staffDefaultPermissions=Array.isArray(settings.data?.value)?settings.data.value.filter((value:unknown)=>permissions.includes(value as typeof permissions[number])):[];
- }
+ const audits=auditResult.data||[],invitations=invitationResult.data||[];
+ const staffDefaultPermissions=Array.isArray(settings.data?.value)?settings.data.value.filter((value:unknown)=>permissions.includes(value as typeof permissions[number])):[];
  return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{profilePhotos:'avatar_path' in profile,sponsorPermissions:'avatar_path' in profile,inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
  }catch(error){const failure=workspaceError(error);return NextResponse.json({error:failure.message},{status:failure.status});}
 }
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
  if(demo()) return NextResponse.json({error:'Demo changes are stored in this browser only.'},{status:400});
  try {
  const body = actionSchema.parse(await request.json()); const client=await supabase();
- const {data:{user}}=await client.auth.getUser(); if(!user) return NextResponse.json({error:'Authentication required'},{status:401});
+ const {data:claims,error:claimsError}=await client.auth.getClaims(); if(claimsError||!claims) return NextResponse.json({error:'Authentication required'},{status:401});
  let result;
  switch(body.action){
  case 'child': {
