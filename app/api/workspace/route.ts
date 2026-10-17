@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { passwordEmailConfigured } from '@/lib/account-mail';
+import { sessionAuthenticatedSince } from '@/lib/account-actions';
 import { demoWorkspace } from '@/lib/demo';
 import { permissions, config } from '@/lib/config';
 import { z } from 'zod';
@@ -21,6 +23,8 @@ export async function GET(request:Request) {
   return NextResponse.json({audits:result.data},{headers:{'Cache-Control':'no-store'}});
  }
  const {data:profile,error} = await client.from('profiles').select('*').eq('id',userId).single(); if(error) throw error;
+ if(profile.must_change_password)return NextResponse.json({forcePasswordChange:true,profile},{status:403});
+ if(!sessionAuthenticatedSince(claims!.claims,profile.password_auth_after))return NextResponse.json({error:'Your password changed. Please sign in again.'},{status:401});
  if(profile.requires_password_setup) return NextResponse.json({setupRequired:true,error:'Finish setting your password using the link in your welcome email. Use Forgot password to request another link.'},{status:403});
  if(profile.status !== 'approved') return NextResponse.json({pending:true,profile},{status:403});
  const allRows = async (table:string,columns='*') => {
@@ -53,7 +57,7 @@ export async function GET(request:Request) {
  assignments.sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)));
  const audits=auditResult.data||[],invitations=invitationResult.data||[];
  const staffDefaultPermissions=Array.isArray(settings.data?.value)?settings.data.value.filter((value:unknown)=>permissions.includes(value as typeof permissions[number])):[];
- return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{profilePhotos:'avatar_path' in profile,sponsorPermissions:'avatar_path' in profile,inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({mode:'live',profile,profiles,children,assignments,entries,audits,invitations,staffDefaultPermissions,capabilities:{accountMaintenance:'must_change_password' in profile,directPasswordReset:'must_change_password' in profile&&accountProvisioningConfigured()&&passwordEmailConfigured(),profilePhotos:'avatar_path' in profile,sponsorPermissions:'avatar_path' in profile,inviteAccounts:accountProvisioningConfigured()&&'requires_password_setup' in profile},grants:Object.fromEntries(grants.map(g=>[String(g.user_id),g]))},{headers:{'Cache-Control':'no-store'}});
  }catch(error){const failure=workspaceError(error);return NextResponse.json({error:failure.message},{status:failure.status});}
 }
 const id = z.uuid(); const amount = moneySchema;

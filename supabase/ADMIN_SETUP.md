@@ -72,3 +72,15 @@ After a successful change/reset, the app requests global sign-out and requires a
 Do not test live email delivery with unrelated addresses. Use an account you control.
 
 References: [Supabase password authentication and recovery](https://supabase.com/docs/guides/auth/passwords), [server-only administrator user creation](https://supabase.com/docs/reference/javascript/auth-admin-createuser), and [password security](https://supabase.com/docs/guides/auth/password-security).
+
+## Administrator account maintenance
+
+Apply migrations in order through `202610170006_account_maintenance.sql` before enabling account editing and administrator password resets. Sponsors and staff have a three-dot menu for name/phone edits and password resets. Email remains the verified sign-in identity; administrators cannot reset another administrator through this feature.
+
+Temporary-password notifications require a custom sender configured privately in Vercel: `MAIL_FROM` plus either `RESEND_API_KEY` (verified sender) or `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASSWORD`. Use port 465 with `SMTP_SECURE=true`, or STARTTLS port 587 with `SMTP_SECURE=false`; TLS is required. Redeploy after changing environment variables. Supabase's built-in invitation sender does not expose an arbitrary-message API. Without these settings, the reset is blocked before changing credentials.
+
+The reset dialog validates matching passwords, offers a cryptographically random generator, and requires confirmation. A reset blocks workspace access until the owner replaces the temporary password. Older sessions remain blocked after setup, based on their authentication timestamp. The database gate is installed atomically with the Auth password change. Only trusted server code can complete the gate after proving the owner's current password or recent recovery link.
+
+Passwords are sent only to the account's existing email address and are never stored in application tables, logs, or Auth metadata. A private request fingerprint supports retries without repeating the password change. Provider acceptance is tracked separately from password update; it does not guarantee inbox delivery. Keep the dialog open to retry an uncertain email. SMTP can duplicate a notification after a lost response; Resend uses an idempotency key. Never verify this feature by resetting a real account without its owner's involvement.
+
+Permission edits can be staged individually or for selected accounts. Bulk controls offer Grant, Remove, and Leave unchanged. Saving uses the existing atomic batch RPC, with expected-value conflict checks and auditing; edited profiles and grants are merged locally without reloading the whole workspace.

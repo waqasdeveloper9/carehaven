@@ -1,5 +1,6 @@
 import { hasRecentWelcomeProof } from './auth-policy';
 import type { Profile } from './types';
+import { sessionAuthenticatedSince } from './account-actions';
 
 type WelcomeIdentity={id:string;email:string;claims:{amr?:unknown}};
 export type WelcomeDependencies={
@@ -18,6 +19,9 @@ export async function completeWelcomeSetup(input:{token_hash?:string;proof_type:
   throw new Error('Your welcome link is invalid or expired. Ask your administrator for a new welcome email.');
  }
  const profile=await auth.profile(identity.id);
+ if(profile&&!sessionAuthenticatedSince(identity.claims,profile.password_auth_after)){
+  await auth.signOut('local');throw new Error('Request a new welcome or recovery link after the administrator password reset.');
+ }
  if(!profile||profile.id!==identity.id||!profile.invited_at||!profile.requires_password_setup||profile.status!=='approved'||!['staff_user','donor'].includes(profile.role)){
   await auth.signOut('local');
   throw new Error('This welcome link cannot set up this account. If setup is already complete, sign in with your password.');

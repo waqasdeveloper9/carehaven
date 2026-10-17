@@ -27,3 +27,16 @@ export function mergePermissionRows(grants:Workspace['grants'],rows:Workspace['g
 export function rebasePermissionChanges(draft:PermissionChange[],grants:Workspace['grants']):PermissionChange[]{
  return draft.flatMap(change=>{const expected=!!grants[change.user_id]?.[change.permission];return expected===change.enabled?[]:[{...change,expected}];});
 }
+export type BulkPermissionValues = Partial<Record<Permission, boolean>>;
+export function stageBulkPermissions(draft:PermissionChange[],grants:Workspace['grants'],ids:string[],values:BulkPermissionValues):PermissionChange[]{
+ const changes=new Map(draft.map(change=>[permissionKey(change.user_id,change.permission),change]));
+ for(const id of new Set(ids))for(const permission of permissions){
+  const enabled=values[permission];if(enabled===undefined)continue;
+  const key=permissionKey(id,permission);
+  const expected=changes.get(key)?.expected??!!grants[id]?.[permission];
+  if(enabled===expected)changes.delete(key);else changes.set(key,{user_id:id,permission,expected,enabled});
+ }
+ const result=[...changes.values()];
+ if(result.length>permissionBatchLimit)throw new Error(`Choose fewer accounts or permissions. A save supports up to ${permissionBatchLimit} changed permissions.`);
+ return result;
+}

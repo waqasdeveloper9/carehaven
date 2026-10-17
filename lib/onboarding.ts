@@ -13,6 +13,7 @@ export const createAccountSchema = z.object({
 export const accountActionSchema = z.union([createAccountSchema, z.object({ action: z.literal('resend'), id: z.uuid() }).strict()]);
 export type Invitation = { user_id: string; delivery_status: 'queued'|'sending'|'accepted_by_provider'|'failed'; send_attempts: number; last_sent_at: string|null; last_error: string|null };
 export function onboardingStatus(profile: Profile) {
+  if (profile.must_change_password) return 'Password change required';
   if (profile.requires_password_setup) return 'Password setup pending';
   if (profile.password_set_at && !profile.first_login_at) return 'Password set · Never logged in';
   if (profile.first_login_at) return 'Active';

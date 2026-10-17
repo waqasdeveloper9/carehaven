@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { authActionSchema, hasRecentRecovery, recoveryMessage, resolveLogin } from '@/lib/auth-policy';
 import { isSameOriginRequest, requestOrigin } from '@/lib/request-security';
+import { finishRequiredPasswordChange } from '@/lib/required-password-change';
+import { sessionAuthenticatedSince } from '@/lib/account-actions';
+import type { Profile } from '@/lib/types';
 import { completeWelcomeSetup } from '@/lib/welcome-flow';
 
 export async function POST(request: Request) {
@@ -12,11 +15,12 @@ export async function POST(request: Request) {
     const client = await supabase();
 
     if(body.action==='setup_password'){
+      let welcomeProfile:Profile|null=null;
       const result=await completeWelcomeSetup(body,{
         verifyToken:async(hash,type)=>{const {error}=await client.auth.verifyOtp({token_hash:hash,type});if(error)throw new Error('This welcome link is invalid or expired. Request a new welcome email.');},
         identity:async()=>{const [{data:{user},error:userError},{data,error}]=await Promise.all([client.auth.getUser(),client.auth.getClaims()]);return userError||error||!user?.email||!data?null:{id:user.id,email:user.email,claims:data.claims};},
-        profile:async id=>{const {data,error}=await client.from('profiles').select('*').eq('id',id).single();if(error)throw new Error('Account setup is unavailable. Contact your administrator.');return data;},
-        savePassword:async password=>{const {error}=await client.auth.updateUser({password});if(error)throw error;},
+        profile:async id=>{const {data,error}=await client.from('profiles').select('*').eq('id',id).single();if(error)throw new Error('Account setup is unavailable. Contact your administrator.');welcomeProfile=data;return data;},
+        savePassword:async password=>{const {error}=await client.auth.updateUser({password});if(error)throw error;if(welcomeProfile)await finishRequiredPasswordChange(welcomeProfile);},
         signOut:async scope=>{const {error}=await client.auth.signOut({scope});if(error)throw error;},
         signIn:async(email,password)=>{const {error}=await client.auth.signInWithPassword({email,password});return !error;},
       });
@@ -41,6 +45,7 @@ export async function POST(request: Request) {
       if (user) {
         const { data: profile, error: profileError } = await client.from('profiles').select('*').eq('id',user.id).single();
         if (profileError) throw new Error('Account configuration is unavailable. Contact your administrator.');
+        if(profile.must_change_password)return NextResponse.json({ok:true,forcePasswordChange:true},{headers:{'Cache-Control':'no-store'}});
         if (profile.requires_password_setup) {
           await client.auth.signOut();
           return NextResponse.json({ error: 'Set your password using your welcome email before signing in. Use Forgot password if you need a new link.' }, { status: 403 });
@@ -63,10 +68,12 @@ export async function POST(request: Request) {
     if (body.action === 'change_password') {
       const { data: { user }, error: userError } = await client.auth.getUser();
       if (userError || !user?.email) return NextResponse.json({ error: 'Please sign in again before changing your password.' }, { status: 401 });
+      const required=await client.from('profiles').select('*').eq('id',user.id).single();if(required.error)throw new Error('Account configuration is unavailable.');
       const { error: checkError } = await client.auth.signInWithPassword({ email: user.email, password: body.current_password });
       if (checkError) return NextResponse.json({ error: 'Your current password is incorrect.' }, { status: 400 });
       const { error } = await client.auth.updateUser({ password: body.password });
       if (error) throw error;
+      await finishRequiredPasswordChange(required.data);
       await client.auth.signOut({ scope: 'global' });
       return NextResponse.json({ ok: true, message: 'Password changed. Please sign in with your new password.' });
     }
@@ -82,11 +89,15 @@ export async function POST(request: Request) {
         await client.auth.signOut();
         return NextResponse.json({error:'A recent password recovery verification is required. Request a new reset link.'},{status:400});
       }
+      const owner=await client.auth.getUser();if(!owner.data.user)throw new Error('Please request a new recovery link.');
+      const required=await client.from('profiles').select('*').eq('id',owner.data.user.id).single();if(required.error)throw required.error;
+      if(!sessionAuthenticatedSince(claimData.claims,required.data.password_auth_after))throw new Error('Request a new password recovery link.');
       const { error } = await client.auth.updateUser({ password: body.password });
       if (error) {
         await client.auth.signOut();
         throw new Error('The password could not be updated. Request a new reset link and try a different password.');
       }
+      await finishRequiredPasswordChange(required.data);
       await client.auth.signOut({ scope: 'global' });
       return NextResponse.json({ ok: true, message: 'Password saved. Please sign in with your new password.' });
     }
